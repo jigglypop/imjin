@@ -1,0 +1,2732 @@
+{
+  "tool": "scripts/building-models.mjs",
+  "provider": "tripo",
+  "model": "v3.1-20260211",
+  "conceptModel": "gemini-3.1-flash-image-preview",
+  "images": {
+    "ming:battery": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a coastal gun battery: a low earth-and-stone gun emplacement with several period cannons behind a parapet, in the architectural style of Ming dynasty China, late 16th century: grey brick walls with crenellations, glazed grey-green tile roofs with sweeping ridge ornaments, red lacquered pillars, yellow Ming banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "6135e456da580b0ba32464ad8e5ff6f14968c70b1bcffe9964608b678cc8fae6",
+      "usage": {
+        "promptTokenCount": 134,
+        "candidatesTokenCount": 1458,
+        "totalTokenCount": 1592,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 134
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "japan:fortress": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a Japanese wajo castle: sloping ishigaki stone base with a small multi-storey tenshu keep, in the architectural style of Sengoku-period Japan, 1592: black-lacquered timber and white plaster walls, dark grey kawara tile roofs with steep curved gables, sloping ishigaki dry-stone castle bases, white nobori banners with black crests. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "cdecd84b3f0cbcc67231e78852c2d75c9683accbc4f50d1a1f51caba75fb2370",
+      "usage": {
+        "promptTokenCount": 149,
+        "candidatesTokenCount": 1404,
+        "totalTokenCount": 1553,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 149
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "japan:camp": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a military camp: a flat cleared compound with a palisade and several small barracks huts or tents in rows, a commander hut and banners, in the architectural style of Sengoku-period Japan, 1592: black-lacquered timber and white plaster walls, dark grey kawara tile roofs with steep curved gables, sloping ishigaki dry-stone castle bases, white nobori banners with black crests. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "818ffe4797ad7da5769668e062a90865e45d841f7b48c09b990a330db60a71a1",
+      "usage": {
+        "promptTokenCount": 156,
+        "candidatesTokenCount": 1428,
+        "totalTokenCount": 1584,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 156
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "ming:beacon": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a Ming fenghuotai beacon tower: square tapering brick tower with crenellated top, in the architectural style of Ming dynasty China, late 16th century: grey brick walls with crenellations, glazed grey-green tile roofs with sweeping ridge ornaments, red lacquered pillars, yellow Ming banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "871e7f353f7b14f12da0ff0bcaf4035f8de5e6ec22f6c8b431f97b90c2fafb02",
+      "usage": {
+        "promptTokenCount": 130,
+        "candidatesTokenCount": 1426,
+        "totalTokenCount": 1556,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 130
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "japan:arsenal": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a military arsenal / armoury: a long storehouse workshop for weapons and cannon with a yard of stacked cannon barrels, in the architectural style of Sengoku-period Japan, 1592: black-lacquered timber and white plaster walls, dark grey kawara tile roofs with steep curved gables, sloping ishigaki dry-stone castle bases, white nobori banners with black crests. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "c0f26d94dd8845ef720e13cc42806dc1b4aa0c210cb465399ceca63b7bb220a5",
+      "usage": {
+        "promptTokenCount": 151,
+        "candidatesTokenCount": 1441,
+        "totalTokenCount": 1592,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 151
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "ming:dock": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a harbour pier: a wooden jetty on piles with a small harbour storehouse, bollards and crates, in the architectural style of Ming dynasty China, late 16th century: grey brick walls with crenellations, glazed grey-green tile roofs with sweeping ridge ornaments, red lacquered pillars, yellow Ming banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "1405f408017b145b4e9e4b65c37a2a7fa027dabab3d9bae4f0c98f18caecdbe3",
+      "usage": {
+        "promptTokenCount": 132,
+        "candidatesTokenCount": 1484,
+        "totalTokenCount": 1616,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 132
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "ming:shipyard": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a naval shipyard: a timber slipway with an unfinished wooden warship hull on stocks, a roofed shed and stacked timber, in the architectural style of Ming dynasty China, late 16th century: grey brick walls with crenellations, glazed grey-green tile roofs with sweeping ridge ornaments, red lacquered pillars, yellow Ming banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "c917bea9294708a725bdf4e600140acd74be724e88c76298c8652772ce894435",
+      "usage": {
+        "promptTokenCount": 137,
+        "candidatesTokenCount": 1522,
+        "totalTokenCount": 1659,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 137
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "ming:magazine": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a gunpowder magazine: a small thick-walled windowless stone powder house with a heavy door and a few powder barrels, in the architectural style of Ming dynasty China, late 16th century: grey brick walls with crenellations, glazed grey-green tile roofs with sweeping ridge ornaments, red lacquered pillars, yellow Ming banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "6823013286a0e8e58320f74301cdda597364d49025ed9a1a9e1c05c6926a74bd",
+      "usage": {
+        "promptTokenCount": 135,
+        "candidatesTokenCount": 1477,
+        "totalTokenCount": 1612,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 135
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "joseon:camp": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a military camp: a flat cleared compound with a palisade and several small barracks huts or tents in rows, a commander hut and banners, in the architectural style of Joseon Korea, 1592 (Imjin War): Korean timber architecture, grey giwa tile roofs with gently upturned eaves, dancheong painted brackets, granite stone walls (eupseong / sanseong), white plaster, blue-red-yellow Joseon banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "e5859c6fad3bc0f2a52300dd34df8245863b5537a54a6af52958d0e35d484ff9",
+      "usage": {
+        "promptTokenCount": 162,
+        "candidatesTokenCount": 1507,
+        "totalTokenCount": 1669,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 162
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "japan:beacon": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a signal beacon tower: a stone fire-signal tower with a fire basin on top for smoke and fire signals, in the architectural style of Sengoku-period Japan, 1592: black-lacquered timber and white plaster walls, dark grey kawara tile roofs with steep curved gables, sloping ishigaki dry-stone castle bases, white nobori banners with black crests. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "8a2f76275f52a5e12ccf8d725e0dce41972572bef29faf13e902b0b51a3c26ac",
+      "usage": {
+        "promptTokenCount": 150,
+        "candidatesTokenCount": 1574,
+        "totalTokenCount": 1724,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 150
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "japan:dock": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a harbour pier: a wooden jetty on piles with a small harbour storehouse, bollards and crates, in the architectural style of Sengoku-period Japan, 1592: black-lacquered timber and white plaster walls, dark grey kawara tile roofs with steep curved gables, sloping ishigaki dry-stone castle bases, white nobori banners with black crests. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "12d8d172787b47998735cb8284ede68fa6a804cc08aff3168e72284d45f89886",
+      "usage": {
+        "promptTokenCount": 148,
+        "candidatesTokenCount": 1557,
+        "totalTokenCount": 1705,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 148
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "ming:camp": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a military camp: a flat cleared compound with a palisade and several small barracks huts or tents in rows, a commander hut and banners, in the architectural style of Ming dynasty China, late 16th century: grey brick walls with crenellations, glazed grey-green tile roofs with sweeping ridge ornaments, red lacquered pillars, yellow Ming banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "615537657512b5684287d2a423979bd7976a36551d166d0f177a91b8220102fc",
+      "usage": {
+        "promptTokenCount": 140,
+        "candidatesTokenCount": 1590,
+        "totalTokenCount": 1730,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 140
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "joseon:beacon": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a Joseon bongsu beacon platform: round granite base with five chimney-like smoke stacks in a row, in the architectural style of Joseon Korea, 1592 (Imjin War): Korean timber architecture, grey giwa tile roofs with gently upturned eaves, dancheong painted brackets, granite stone walls (eupseong / sanseong), white plaster, blue-red-yellow Joseon banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "5f6a13b639879ab2346759e8ffffaa16511e1292d3cc5a25d26e7b2dd1bd2872",
+      "usage": {
+        "promptTokenCount": 155,
+        "candidatesTokenCount": 1529,
+        "totalTokenCount": 1684,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 155
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "japan:battery": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a coastal gun battery: a low earth-and-stone gun emplacement with several period cannons behind a parapet, in the architectural style of Sengoku-period Japan, 1592: black-lacquered timber and white plaster walls, dark grey kawara tile roofs with steep curved gables, sloping ishigaki dry-stone castle bases, white nobori banners with black crests. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "8cdbbad8a5a5aa1c99f0a26b3b09533aeba38c0ce28d7c89e0fc75a84dc85873",
+      "usage": {
+        "promptTokenCount": 150,
+        "candidatesTokenCount": 1490,
+        "totalTokenCount": 1640,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 150
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "ming:fortress": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a coastal fortress: a compact walled stronghold with gate, towers and a main keep or hall, in the architectural style of Ming dynasty China, late 16th century: grey brick walls with crenellations, glazed grey-green tile roofs with sweeping ridge ornaments, red lacquered pillars, yellow Ming banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "b5babd849fd8ef5ac558f8755bce1d0b0f533110e40f8f4614113138ca58b769",
+      "usage": {
+        "promptTokenCount": 130,
+        "candidatesTokenCount": 1439,
+        "totalTokenCount": 1569,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 130
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "joseon:dock": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a harbour pier: a wooden jetty on piles with a small harbour storehouse, bollards and crates, in the architectural style of Joseon Korea, 1592 (Imjin War): Korean timber architecture, grey giwa tile roofs with gently upturned eaves, dancheong painted brackets, granite stone walls (eupseong / sanseong), white plaster, blue-red-yellow Joseon banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "2b0c149f2a7405eba78ad8bcddb2bc1a53b5d99ef754dfd483a3ef29bcfdd359",
+      "usage": {
+        "promptTokenCount": 154,
+        "candidatesTokenCount": 1530,
+        "totalTokenCount": 1684,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 154
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "joseon:fortress": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a Joseon suyeong naval headquarters fortress: curved granite wall with a two-storey gate pavilion, in the architectural style of Joseon Korea, 1592 (Imjin War): Korean timber architecture, grey giwa tile roofs with gently upturned eaves, dancheong painted brackets, granite stone walls (eupseong / sanseong), white plaster, blue-red-yellow Joseon banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "ea16ebe34c4c0e4b83106a93f8ef4e5896eec95f97bb4e62f8279e500e2a092f",
+      "usage": {
+        "promptTokenCount": 153,
+        "candidatesTokenCount": 1538,
+        "totalTokenCount": 1691,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 153
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "joseon:battery": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a coastal gun battery: a low earth-and-stone gun emplacement with several period cannons behind a parapet, in the architectural style of Joseon Korea, 1592 (Imjin War): Korean timber architecture, grey giwa tile roofs with gently upturned eaves, dancheong painted brackets, granite stone walls (eupseong / sanseong), white plaster, blue-red-yellow Joseon banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "beb671a76f7ed84cba897d019a5ad05026854d69956d3e92b6c60e901a14fda7",
+      "usage": {
+        "promptTokenCount": 156,
+        "candidatesTokenCount": 1588,
+        "totalTokenCount": 1744,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 156
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "joseon:magazine": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a gunpowder magazine: a small thick-walled windowless stone powder house with a heavy door and a few powder barrels, in the architectural style of Joseon Korea, 1592 (Imjin War): Korean timber architecture, grey giwa tile roofs with gently upturned eaves, dancheong painted brackets, granite stone walls (eupseong / sanseong), white plaster, blue-red-yellow Joseon banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "aa9bc71d8c85653fbdb63e9edcd2b5b47bfd43b9cac843a7cc807da17fcee604",
+      "usage": {
+        "promptTokenCount": 157,
+        "candidatesTokenCount": 1570,
+        "totalTokenCount": 1727,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 157
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "ming:arsenal": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a military arsenal / armoury: a long storehouse workshop for weapons and cannon with a yard of stacked cannon barrels, in the architectural style of Ming dynasty China, late 16th century: grey brick walls with crenellations, glazed grey-green tile roofs with sweeping ridge ornaments, red lacquered pillars, yellow Ming banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "6b94b21b6c92b59b6a00e1d8eba26311d2f0d7dcf7fcfb1e4dded123f7ff89a8",
+      "usage": {
+        "promptTokenCount": 135,
+        "candidatesTokenCount": 1521,
+        "totalTokenCount": 1656,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 135
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "japan:magazine": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a gunpowder magazine: a small thick-walled windowless stone powder house with a heavy door and a few powder barrels, in the architectural style of Sengoku-period Japan, 1592: black-lacquered timber and white plaster walls, dark grey kawara tile roofs with steep curved gables, sloping ishigaki dry-stone castle bases, white nobori banners with black crests. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "21936ea8ae6d6aee7c182f44c4f5fd7eccbfa229b7c4f86bdd30a7aca3061d82",
+      "usage": {
+        "promptTokenCount": 151,
+        "candidatesTokenCount": 1583,
+        "totalTokenCount": 1734,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 151
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "joseon:arsenal": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a military arsenal / armoury: a long storehouse workshop for weapons and cannon with a yard of stacked cannon barrels, in the architectural style of Joseon Korea, 1592 (Imjin War): Korean timber architecture, grey giwa tile roofs with gently upturned eaves, dancheong painted brackets, granite stone walls (eupseong / sanseong), white plaster, blue-red-yellow Joseon banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "e8e5e9ffcb575263e81b9fca80b6b66232e44bc7ad860fd5a649ab82e3f7252e",
+      "usage": {
+        "promptTokenCount": 157,
+        "candidatesTokenCount": 1583,
+        "totalTokenCount": 1740,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 157
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "joseon:shipyard": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a naval shipyard: a timber slipway with an unfinished wooden warship hull on stocks, a roofed shed and stacked timber, in the architectural style of Joseon Korea, 1592 (Imjin War): Korean timber architecture, grey giwa tile roofs with gently upturned eaves, dancheong painted brackets, granite stone walls (eupseong / sanseong), white plaster, blue-red-yellow Joseon banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "f2757665616a540c743a6d8ee2da7f7ec91b8bbf5a202578a727df5585e61fac",
+      "usage": {
+        "promptTokenCount": 159,
+        "candidatesTokenCount": 1625,
+        "totalTokenCount": 1784,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 159
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "japan:shipyard": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a naval shipyard: a timber slipway with an unfinished wooden warship hull on stocks, a roofed shed and stacked timber, in the architectural style of Sengoku-period Japan, 1592: black-lacquered timber and white plaster walls, dark grey kawara tile roofs with steep curved gables, sloping ishigaki dry-stone castle bases, white nobori banners with black crests. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "2d2eb7b3ae9704d861eb9fedaefd6819424951fbb6d7cb1aa62e25db6625476c",
+      "usage": {
+        "promptTokenCount": 153,
+        "candidatesTokenCount": 1519,
+        "totalTokenCount": 1672,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 153
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "france:camp": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a military camp: a flat cleared compound with a palisade and several small barracks huts or tents in rows, a commander hut and banners, in the architectural style of Bourbon France, 1805: Vauban-style dressed limestone bastions, blue-grey slate mansard roofs, rendered walls, French tricolour flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "a38f4a9e77a541feb7feb0585c04c63845e5519e2fd458e3e6850324ced5842c",
+      "usage": {
+        "promptTokenCount": 137,
+        "candidatesTokenCount": 1429,
+        "totalTokenCount": 1566,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 137
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "venice:shipyard": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a naval shipyard: a timber slipway with an unfinished wooden warship hull on stocks, a roofed shed and stacked timber, in the architectural style of Republic of Venice, 1571 (Arsenale style): red brick with white Istrian stone trim, terracotta tiles, crenellated walls, red-gold winged lion of St Mark banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "0c834d063691082f1adac92f944aafd49e315642d27ad9f34b8616008eebe18f",
+      "usage": {
+        "promptTokenCount": 141,
+        "candidatesTokenCount": 1426,
+        "totalTokenCount": 1567,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 141
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "ottoman:beacon": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a signal beacon tower: a stone fire-signal tower with a fire basin on top for smoke and fire signals, in the architectural style of Ottoman Empire, 1571: cut limestone masonry, lead-covered domes, pointed arches, round towers with conical lead roofs, red flags with crescent. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "0e44faede919074c65c99cbd7113c35e57f4c74fdfc59b924efb273df10c8818",
+      "usage": {
+        "promptTokenCount": 129,
+        "candidatesTokenCount": 1384,
+        "totalTokenCount": 1513,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 129
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "ottoman:battery": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a coastal gun battery: a low earth-and-stone gun emplacement with several period cannons behind a parapet, in the architectural style of Ottoman Empire, 1571: cut limestone masonry, lead-covered domes, pointed arches, round towers with conical lead roofs, red flags with crescent. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "324fa114478a207b67e9b7868fc4f3c7592817e94fe8f099656c6b731cca27d3",
+      "usage": {
+        "promptTokenCount": 129,
+        "candidatesTokenCount": 1329,
+        "totalTokenCount": 1458,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 129
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "spain:beacon": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a signal beacon tower: a stone fire-signal tower with a fire basin on top for smoke and fire signals, in the architectural style of Habsburg Spain, 1588: whitewashed lime-plaster walls, ochre sandstone, terracotta roof tiles, Renaissance arches, red Burgundy-cross flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "a4732089659bbc61a262e0e2a9465043d604b16269d4695a0e81b74bfffc1bdd",
+      "usage": {
+        "promptTokenCount": 130,
+        "candidatesTokenCount": 1451,
+        "totalTokenCount": 1581,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 130
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "ottoman:camp": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a military camp: a flat cleared compound with a palisade and several small barracks huts or tents in rows, a commander hut and banners, in the architectural style of Ottoman Empire, 1571: cut limestone masonry, lead-covered domes, pointed arches, round towers with conical lead roofs, red flags with crescent. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "7dea4ba57f6619c42877428c6e84f80682d935a495d32d35674a1a6c99c2e174",
+      "usage": {
+        "promptTokenCount": 135,
+        "candidatesTokenCount": 1428,
+        "totalTokenCount": 1563,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 135
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "france:battery": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a coastal gun battery: a low earth-and-stone gun emplacement with several period cannons behind a parapet, in the architectural style of Bourbon France, 1805: Vauban-style dressed limestone bastions, blue-grey slate mansard roofs, rendered walls, French tricolour flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "680e2d5aac6dc74239fe7a7d779cc50590eafc6ff091066f9bc3b4660501c106",
+      "usage": {
+        "promptTokenCount": 131,
+        "candidatesTokenCount": 1476,
+        "totalTokenCount": 1607,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 131
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "england:beacon": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a signal beacon tower: a stone fire-signal tower with a fire basin on top for smoke and fire signals, in the architectural style of Tudor England, 1588: half-timbered oak and wattle, red brick, grey slate or thatch roofs, coursed grey stone, St George cross flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "f5c4762e646cfa6b5e02ec3124e7c5d77a1f6c2ea5b6d83d034ec1985d6830d0",
+      "usage": {
+        "promptTokenCount": 133,
+        "candidatesTokenCount": 1497,
+        "totalTokenCount": 1630,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 133
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "venice:dock": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a harbour pier: a wooden jetty on piles with a small harbour storehouse, bollards and crates, in the architectural style of Republic of Venice, 1571 (Arsenale style): red brick with white Istrian stone trim, terracotta tiles, crenellated walls, red-gold winged lion of St Mark banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "ce0f4fff6bc7f5dcadd1668751f33c41d9c7b68f2cb0019c1e53f7c7e5bf2c56",
+      "usage": {
+        "promptTokenCount": 136,
+        "candidatesTokenCount": 1475,
+        "totalTokenCount": 1611,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 136
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "spain:battery": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a coastal gun battery: a low earth-and-stone gun emplacement with several period cannons behind a parapet, in the architectural style of Habsburg Spain, 1588: whitewashed lime-plaster walls, ochre sandstone, terracotta roof tiles, Renaissance arches, red Burgundy-cross flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "0376e467ad6a566d16b1d7864db08cddd17c8c1cc2825c1d9f655f1848c06e05",
+      "usage": {
+        "promptTokenCount": 130,
+        "candidatesTokenCount": 1490,
+        "totalTokenCount": 1620,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 130
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "france:shipyard": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a naval shipyard: a timber slipway with an unfinished wooden warship hull on stocks, a roofed shed and stacked timber, in the architectural style of Bourbon France, 1805: Vauban-style dressed limestone bastions, blue-grey slate mansard roofs, rendered walls, French tricolour flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "6fcaadb2010a9711119169a458dc7f5e88ab363bb45550705f41fd98ef8a8e0f",
+      "usage": {
+        "promptTokenCount": 134,
+        "candidatesTokenCount": 1554,
+        "totalTokenCount": 1688,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 134
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "spain:dock": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a harbour pier: a wooden jetty on piles with a small harbour storehouse, bollards and crates, in the architectural style of Habsburg Spain, 1588: whitewashed lime-plaster walls, ochre sandstone, terracotta roof tiles, Renaissance arches, red Burgundy-cross flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "c01bebe86a6fbe121237992cc6a3fe3889d13b6d3acc39708e926c6c56f025d3",
+      "usage": {
+        "promptTokenCount": 128,
+        "candidatesTokenCount": 1578,
+        "totalTokenCount": 1706,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 128
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "france:beacon": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a signal beacon tower: a stone fire-signal tower with a fire basin on top for smoke and fire signals, in the architectural style of Bourbon France, 1805: Vauban-style dressed limestone bastions, blue-grey slate mansard roofs, rendered walls, French tricolour flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "97e39a10f0f1e1bccb64bbd2c70247425793fad40e8bd71942b8f3bba7590286",
+      "usage": {
+        "promptTokenCount": 131,
+        "candidatesTokenCount": 1557,
+        "totalTokenCount": 1688,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 131
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "venice:beacon": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a signal beacon tower: a stone fire-signal tower with a fire basin on top for smoke and fire signals, in the architectural style of Republic of Venice, 1571 (Arsenale style): red brick with white Istrian stone trim, terracotta tiles, crenellated walls, red-gold winged lion of St Mark banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "392811eb4183ec22b35293ae4f5a562325e6dd0ec9a40aa97e56cea0fa2d6343",
+      "usage": {
+        "promptTokenCount": 138,
+        "candidatesTokenCount": 1562,
+        "totalTokenCount": 1700,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 138
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "england:magazine": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a gunpowder magazine: a small thick-walled windowless stone powder house with a heavy door and a few powder barrels, in the architectural style of Tudor England, 1588: half-timbered oak and wattle, red brick, grey slate or thatch roofs, coursed grey stone, St George cross flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "f1397a208ba9eb430f6d732273fbb3bd55ac33d4f86c324ad2cb9687f935fcdb",
+      "usage": {
+        "promptTokenCount": 134,
+        "candidatesTokenCount": 1443,
+        "totalTokenCount": 1577,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 134
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "england:shipyard": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a naval shipyard: a timber slipway with an unfinished wooden warship hull on stocks, a roofed shed and stacked timber, in the architectural style of Tudor England, 1588: half-timbered oak and wattle, red brick, grey slate or thatch roofs, coursed grey stone, St George cross flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "c092b02ed72d31cc4b5bf2b6343924f6a1e89e069958cf982ca48ff823865749",
+      "usage": {
+        "promptTokenCount": 136,
+        "candidatesTokenCount": 1554,
+        "totalTokenCount": 1690,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 136
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "spain:shipyard": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a naval shipyard: a timber slipway with an unfinished wooden warship hull on stocks, a roofed shed and stacked timber, in the architectural style of Habsburg Spain, 1588: whitewashed lime-plaster walls, ochre sandstone, terracotta roof tiles, Renaissance arches, red Burgundy-cross flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "220fb0f491431e6876eb2d5f5649f403b9cf3b74320d56a48d1ba6c320b722b7",
+      "usage": {
+        "promptTokenCount": 133,
+        "candidatesTokenCount": 1465,
+        "totalTokenCount": 1598,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 133
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "ottoman:dock": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a harbour pier: a wooden jetty on piles with a small harbour storehouse, bollards and crates, in the architectural style of Ottoman Empire, 1571: cut limestone masonry, lead-covered domes, pointed arches, round towers with conical lead roofs, red flags with crescent. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "71c2193a17ee9054239389e56b249fa4df04f7debe407bdc24492495380f98c8",
+      "usage": {
+        "promptTokenCount": 127,
+        "candidatesTokenCount": 1483,
+        "totalTokenCount": 1610,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 127
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "venice:battery": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a coastal gun battery: a low earth-and-stone gun emplacement with several period cannons behind a parapet, in the architectural style of Republic of Venice, 1571 (Arsenale style): red brick with white Istrian stone trim, terracotta tiles, crenellated walls, red-gold winged lion of St Mark banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "2a0bec036d6daa099aa76d4fec713a17a0f3d2838ff5c1c2a9c32f1eb3c44fec",
+      "usage": {
+        "promptTokenCount": 138,
+        "candidatesTokenCount": 1530,
+        "totalTokenCount": 1668,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 138
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "spain:magazine": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a gunpowder magazine: a small thick-walled windowless stone powder house with a heavy door and a few powder barrels, in the architectural style of Habsburg Spain, 1588: whitewashed lime-plaster walls, ochre sandstone, terracotta roof tiles, Renaissance arches, red Burgundy-cross flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "9fc3ca1794dd1a84e320554c3572d5969d4ce5c2f08d50d0e8c83c8ebedc3ecc",
+      "usage": {
+        "promptTokenCount": 131,
+        "candidatesTokenCount": 1577,
+        "totalTokenCount": 1708,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 131
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "ottoman:shipyard": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a naval shipyard: a timber slipway with an unfinished wooden warship hull on stocks, a roofed shed and stacked timber, in the architectural style of Ottoman Empire, 1571: cut limestone masonry, lead-covered domes, pointed arches, round towers with conical lead roofs, red flags with crescent. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "d840b228bb4123cf6569e9860d744bfdd62af0ca67da41c7524d82fde7bda91c",
+      "usage": {
+        "promptTokenCount": 132,
+        "candidatesTokenCount": 1529,
+        "totalTokenCount": 1661,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 132
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "france:dock": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a harbour pier: a wooden jetty on piles with a small harbour storehouse, bollards and crates, in the architectural style of Bourbon France, 1805: Vauban-style dressed limestone bastions, blue-grey slate mansard roofs, rendered walls, French tricolour flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "425bf9a390fb11bb05c5a7adde0b5b6e30804d22c9340073cf6257f1a147e916",
+      "usage": {
+        "promptTokenCount": 129,
+        "candidatesTokenCount": 1451,
+        "totalTokenCount": 1580,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 129
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "england:battery": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a coastal gun battery: a low earth-and-stone gun emplacement with several period cannons behind a parapet, in the architectural style of Tudor England, 1588: half-timbered oak and wattle, red brick, grey slate or thatch roofs, coursed grey stone, St George cross flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "74092a7381eed15f58231b1e005e995a2327b39c8a9ab5e52b5d41e76caa87b9",
+      "usage": {
+        "promptTokenCount": 133,
+        "candidatesTokenCount": 1425,
+        "totalTokenCount": 1558,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 133
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "spain:camp": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a military camp: a flat cleared compound with a palisade and several small barracks huts or tents in rows, a commander hut and banners, in the architectural style of Habsburg Spain, 1588: whitewashed lime-plaster walls, ochre sandstone, terracotta roof tiles, Renaissance arches, red Burgundy-cross flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "a48e58b807e0d49c762d4141fedd5f3313595705ac89b0d6a9785b749d688997",
+      "usage": {
+        "promptTokenCount": 136,
+        "candidatesTokenCount": 1526,
+        "totalTokenCount": 1662,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 136
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "venice:camp": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a military camp: a flat cleared compound with a palisade and several small barracks huts or tents in rows, a commander hut and banners, in the architectural style of Republic of Venice, 1571 (Arsenale style): red brick with white Istrian stone trim, terracotta tiles, crenellated walls, red-gold winged lion of St Mark banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "043dc59b26609cde83b46aa984124fd8355f402ddc4cb9b7e7c5b7b787021d4b",
+      "usage": {
+        "promptTokenCount": 144,
+        "candidatesTokenCount": 1509,
+        "totalTokenCount": 1653,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 144
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "ottoman:magazine": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a gunpowder magazine: a small thick-walled windowless stone powder house with a heavy door and a few powder barrels, in the architectural style of Ottoman Empire, 1571: cut limestone masonry, lead-covered domes, pointed arches, round towers with conical lead roofs, red flags with crescent. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "15db5a3b42ee0a589c1c77df822a5736913eeec70711b390dc77d24bfa70b534",
+      "usage": {
+        "promptTokenCount": 130,
+        "candidatesTokenCount": 1433,
+        "totalTokenCount": 1563,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 130
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "france:magazine": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a gunpowder magazine: a small thick-walled windowless stone powder house with a heavy door and a few powder barrels, in the architectural style of Bourbon France, 1805: Vauban-style dressed limestone bastions, blue-grey slate mansard roofs, rendered walls, French tricolour flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "d7108e60460fcb4c8628bf7824119f19265d7ad47964cf6b3b8ed4f8d4abd518",
+      "usage": {
+        "promptTokenCount": 132,
+        "candidatesTokenCount": 1488,
+        "totalTokenCount": 1620,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 132
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "venice:magazine": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a gunpowder magazine: a small thick-walled windowless stone powder house with a heavy door and a few powder barrels, in the architectural style of Republic of Venice, 1571 (Arsenale style): red brick with white Istrian stone trim, terracotta tiles, crenellated walls, red-gold winged lion of St Mark banners. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "0644395bf30e2c46c47af67491b27a0674da4dfd5fa2689da952885ef5339a3a",
+      "usage": {
+        "promptTokenCount": 139,
+        "candidatesTokenCount": 1570,
+        "totalTokenCount": 1709,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 139
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "england:dock": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a harbour pier: a wooden jetty on piles with a small harbour storehouse, bollards and crates, in the architectural style of Tudor England, 1588: half-timbered oak and wattle, red brick, grey slate or thatch roofs, coursed grey stone, St George cross flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "9e1078ce935a5473ddd5d0c78e3e865269046e5a211d87f57021de51169e73fc",
+      "usage": {
+        "promptTokenCount": 131,
+        "candidatesTokenCount": 1563,
+        "totalTokenCount": 1694,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 131
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    "england:camp": {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image-preview",
+      "prompt": "a military camp: a flat cleared compound with a palisade and several small barracks huts or tents in rows, a commander hut and banners, in the architectural style of Tudor England, 1588: half-timbered oak and wattle, red brick, grey slate or thatch roofs, coursed grey stone, St George cross flags. Single isolated 3D game asset render of one historically accurate building, physically based materials, soft even daylight, standing on a small flat patch of bare earth, plain pure white background, whole building visible and centred, three-quarter view from above, compact chunky readable silhouette, no people, no water, no text, no watermark.",
+      "sha256": "19b6f61f7bfb3e165fb7b9e898714f3ec36694e5944c5571a599f79cfa4191c9",
+      "usage": {
+        "promptTokenCount": 139,
+        "candidatesTokenCount": 1466,
+        "totalTokenCount": 1605,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 139
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "IMAGE",
+            "tokenCount": 1120
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    }
+  },
+  "tasks": {
+    "joseon:fortress": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "5f8c0cd4-b08d-41e5-a9f8-eccdbb30e27e",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 2105,
+      "originalSha256": "8a01095eaf96f782098e0a5f39c5065ad177f5752aba9bcb64db480794df9f7d",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/joseon/fortress.glb": {
+          "sha256": "28bae6fc6f03e67fef433a3ce6fc75d40efbd9801e0b6fa1e9d7bb934ee89684",
+          "size": 392680
+        },
+        "ublic/models/buildings/joseon/fortress_lod1.glb": {
+          "sha256": "9e46cdc1bb74deabff6ca0377a342483efb0c74b55a5a92ec644d79f6852f730",
+          "size": 69160
+        }
+      }
+    },
+    "joseon:arsenal": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "89d64a0e-05b6-4260-8d77-38837fdfbabe",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 2045,
+      "originalSha256": "dbcf2f02a2982895e5be0d5e863697afad267e3d4ad0fcbcaf43c4e4118ac2f1",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/joseon/arsenal.glb": {
+          "sha256": "fb3d4ef45cb09ac279ab916044b3201df02805cd276cdaf02258a0fd02b0ccea",
+          "size": 352244
+        },
+        "ublic/models/buildings/joseon/arsenal_lod1.glb": {
+          "sha256": "e622f9771567315859c2ed4cc0d07fcf15cdae7a83adcb45c704314476322593",
+          "size": 73836
+        }
+      }
+    },
+    "joseon:shipyard": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "1609cc72-a830-4eca-a908-72ab9ace8d8a",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1985,
+      "originalSha256": "9a01d5fb945511329e522fcdacb77cd1412beadbfad3a2617c51bf2c0ef97513",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/joseon/shipyard.glb": {
+          "sha256": "623bb1d6178185c475e59477436de0fa2399cd38c1057a86e7d82a7d677d507b",
+          "size": 276464
+        },
+        "ublic/models/buildings/joseon/shipyard_lod1.glb": {
+          "sha256": "b0b229bc021c6cea4d3c627decbed93d92ab10dd9306cc9c0eab1f940d1fe889",
+          "size": 75104
+        }
+      }
+    },
+    "joseon:battery": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "ad7976e0-50bf-4345-a677-f7040500ac96",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1925,
+      "originalSha256": "0ae59df07a975b34a7cf08acd90f1bd448195a2254dabf916900e823a019c71a",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/joseon/battery.glb": {
+          "sha256": "1e424334095d43a82780b9acf74b921cfaf541a3ee5dcb6c10f3cd774965b026",
+          "size": 333132
+        },
+        "ublic/models/buildings/joseon/battery_lod1.glb": {
+          "sha256": "fb0f655440addd89363be50210387a7b5dee5b8c2790e7d2abdd2b24751f64cc",
+          "size": 60940
+        }
+      }
+    },
+    "joseon:magazine": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "e6f44193-3d36-4095-838b-bbf048e80697",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1865,
+      "originalSha256": "e661442ebde2cb5af760da6d54717a430642d061ac26a36ff4f73acadffdc587",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/joseon/magazine.glb": {
+          "sha256": "55eccd94343db4d22fc4404401c01efdc94443ac6a2e5e98fe32b8e1892a609d",
+          "size": 373860
+        },
+        "ublic/models/buildings/joseon/magazine_lod1.glb": {
+          "sha256": "c7b96d745d5087e0dfe41d81ac838b91688cddf62635579b9c2b2d98f9b2f262",
+          "size": 65708
+        }
+      }
+    },
+    "joseon:dock": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "6a97c5cd-424e-4bd9-8a49-500a2f903e5b",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1805,
+      "originalSha256": "11e44804979d95cea95dd5a7f1fa2fd61dd7c9198e57442158c670b28384fc33",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/joseon/dock.glb": {
+          "sha256": "49865d03aa5fae70eb293621e62be4edeeee164da0a1037c63f699222441fec8",
+          "size": 358956
+        },
+        "ublic/models/buildings/joseon/dock_lod1.glb": {
+          "sha256": "70e314b52cf68eb227cc6906f7498c251dd8f301a61d5027fb3bdeb49da70010",
+          "size": 67272
+        }
+      }
+    },
+    "joseon:beacon": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "52b4ab90-7739-44a6-bbd3-7f6d300fca86",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1745,
+      "originalSha256": "22310eb43fcbc7a2ac74ed96d62149fe90df1352e461303a3699143f128fcd45",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/joseon/beacon.glb": {
+          "sha256": "e222565eb12c43d05dc0d8f88e7436b918e9298833fb1f76fcbaac1e51026327",
+          "size": 363532
+        },
+        "ublic/models/buildings/joseon/beacon_lod1.glb": {
+          "sha256": "b0ad7627b53c884acb2e1e7cf14b4221cd60e966d244ce707f0e00c4fc3b49cd",
+          "size": 60032
+        }
+      }
+    },
+    "joseon:camp": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "c63ca22f-8a7b-4507-a1fc-0555619e9eb7",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1685,
+      "originalSha256": "36b110191a07f34c76f77dcc016acdd65672bf5900301ac1356f0cdb70f3eecd",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/joseon/camp.glb": {
+          "sha256": "e364c5eba0cd6bf2b6b938a05f1377b644badccecc379d82503a78d0b1df0207",
+          "size": 364164
+        },
+        "ublic/models/buildings/joseon/camp_lod1.glb": {
+          "sha256": "e774c09b243a94d6a8abb90d2bfb966660de14b259b13dff0813f0a437e70680",
+          "size": 60440
+        }
+      }
+    },
+    "japan:fortress": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "54d76959-e954-4485-988b-657987022dda",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1625,
+      "originalSha256": "7d1577b54d227ef21821e670b826fb9ab710af95302b58e7aefac87793c9fbc7",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/japan/fortress.glb": {
+          "sha256": "1baf5555cede5476613e117bab1ef5aa5eab439442da23050b2f34e33d037963",
+          "size": 360860
+        },
+        "ublic/models/buildings/japan/fortress_lod1.glb": {
+          "sha256": "90f6d7a5bdda2ab95d1af9df25ee1485fcd8a184ef4c96838a6344db864193a5",
+          "size": 71656
+        }
+      }
+    },
+    "japan:arsenal": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "9f10c2df-95d2-4822-8bc1-ec0c8be2e86e",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1565,
+      "originalSha256": "dd41b4698d5e3db2a0cbfff855182d3c65154e7f0f919830d9fcc721fee6393a",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/japan/arsenal.glb": {
+          "sha256": "e4b688e3379ad2dfee557c52acf44c5a042e2bb4903d5cc3bcd92b8bd5ff7a77",
+          "size": 296204
+        },
+        "ublic/models/buildings/japan/arsenal_lod1.glb": {
+          "sha256": "3b135fa015398bc9adb1c31c5e50ad61ae7a5a0e821c28025d9137c7dbee18ed",
+          "size": 77244
+        }
+      }
+    },
+    "japan:shipyard": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "a0bfba97-3262-49a8-be83-1573ea4e4c3d",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1505,
+      "originalSha256": "59c85aaf35b03029253300988f1ad0aba804c7d65bd14037188121f6d71f8628",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/japan/shipyard.glb": {
+          "sha256": "8decc308bce835eac365e4f63f3c0b11128fb179ba4fd29d726a4a85f1547321",
+          "size": 269580
+        },
+        "ublic/models/buildings/japan/shipyard_lod1.glb": {
+          "sha256": "c861a84d4950ded44ffe7224827f83922a86952ef4e06d51d5a6580cf0740784",
+          "size": 71664
+        }
+      }
+    },
+    "japan:battery": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "83f625c7-acdc-4986-8eb1-fb325731750b",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1445,
+      "originalSha256": "66d9a377028c9639a2116e481ecd4f0196b3adfa02b8579ecfb078d18f18f359",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/japan/battery.glb": {
+          "sha256": "8e26acdbc65846bce89de751ad67d2ee9e21d7ee9c0ef4b23a83741f0b9db032",
+          "size": 343884
+        },
+        "ublic/models/buildings/japan/battery_lod1.glb": {
+          "sha256": "936cab334c8cbcdb151547df893e4c09151a23f02b1d61af9bb5175e77582785",
+          "size": 75012
+        }
+      }
+    },
+    "japan:magazine": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "f7ff8e80-ddcb-4d59-8836-717062c82eed",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1385,
+      "originalSha256": "0863d3b7e2360a8cdc8906e6040d78b439608743b3f5e205f14678ecf8a18848",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/japan/magazine.glb": {
+          "sha256": "8e435295842594bb3f82d14b7c1851f9a679d9235426ad24336f6cb21283102d",
+          "size": 280924
+        },
+        "ublic/models/buildings/japan/magazine_lod1.glb": {
+          "sha256": "94bec0c82c3bc41f11f552772a266cb971d28dd3d518ef4f8c4b12b55b824cb1",
+          "size": 61976
+        }
+      }
+    },
+    "japan:dock": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "2aebe7b6-d5cc-40a1-9dae-f6565e0af9a6",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1325,
+      "originalSha256": "d69dfbb54c49927658e50530c893a9da0abe9752fff87d75593fb5bfec507944",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/japan/dock.glb": {
+          "sha256": "83fa9d9090b205cb9d222d62790c69e78916eae7779bf43fdad74b279544db08",
+          "size": 342224
+        },
+        "ublic/models/buildings/japan/dock_lod1.glb": {
+          "sha256": "451166178883d57b78b9e57e4497b2ecb0d05fb1e4c887ca912450597bb778ec",
+          "size": 64632
+        }
+      }
+    },
+    "japan:beacon": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "6b963d79-2410-489e-9113-f2d3a34bde6b",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1265,
+      "originalSha256": "b3492ccb9d3278acebc4631ef643fd3722c42d4010946d01f7f4e568da1b706f",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/japan/beacon.glb": {
+          "sha256": "2feb4b27550c31a035a50b9dc408498b05d1c5368b9aa4833362449df86549ce",
+          "size": 360984
+        },
+        "ublic/models/buildings/japan/beacon_lod1.glb": {
+          "sha256": "438d510e0cd113c4b2fd66dfe56965fd122b5df4e4b0f646a26b96a9befac1fb",
+          "size": 74544
+        }
+      }
+    },
+    "japan:camp": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "1ff5671b-491e-469f-95e3-a9cf95cf4896",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1205,
+      "originalSha256": "5d9a50d491b82153ed7bf712b9617db7cfe8d4756944a4b8ca6f686849082570",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/japan/camp.glb": {
+          "sha256": "86f8813812ebb5dbe6be9a761f000b5c91b0ea31cd26f22670977ada8204721b",
+          "size": 263352
+        },
+        "ublic/models/buildings/japan/camp_lod1.glb": {
+          "sha256": "21aec894813a10217b4a4034d7f5793354aaf341eabdf4a39a115a91fb018829",
+          "size": 60108
+        }
+      }
+    },
+    "ming:fortress": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "93c9a6f1-126d-4c8e-86f4-ceeaf5b392a4",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1145,
+      "originalSha256": "b58b0b64e7daf15e354ca2b4294820ea6e6b3eaa9c00a38ae7a87641953d05c2",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/ming/fortress.glb": {
+          "sha256": "b5523c60cc52a11165462f67d9e5904903f0deb348ab08e4eff5039340a7d1ff",
+          "size": 374964
+        },
+        "ublic/models/buildings/ming/fortress_lod1.glb": {
+          "sha256": "72a5ffe6c18509b51a917c282086e7f2665124303e8738cfe345f051147ddf2b",
+          "size": 80356
+        }
+      }
+    },
+    "ming:arsenal": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "f1c0744f-c303-4f2e-86cd-b95f9c38b5ed",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1085,
+      "originalSha256": "d24e46d078186ce26c7b396e5c96c7f51818d87a0786e8421f72d1b65d934500",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/ming/arsenal.glb": {
+          "sha256": "dc2c079940bee87b6d79ef6c909e496ab862939fef892c9eb3195fb83b6970bd",
+          "size": 319252
+        },
+        "ublic/models/buildings/ming/arsenal_lod1.glb": {
+          "sha256": "6f96362245708ddf833512c1500d6b71e960ab19a3256f0ae705d0e5f0bfd86e",
+          "size": 79744
+        }
+      }
+    },
+    "ming:shipyard": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "88c40ad7-7525-44a9-8a2d-31bd63bbc4c4",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 1025,
+      "originalSha256": "1c967ac7f443d0eacbe2381bceab94788a5d7939effb0f69ba5538e299d1ac15",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/ming/shipyard.glb": {
+          "sha256": "5373c2ec46a414cc7cf3c3cbb1908b72658dadfbece2995ddb988ca11a81d759",
+          "size": 281260
+        },
+        "ublic/models/buildings/ming/shipyard_lod1.glb": {
+          "sha256": "e3efb92da4a7be83d12e79e05d55dc9cf0279d6963e40aa78e45eaf1c3ea05ed",
+          "size": 72496
+        }
+      }
+    },
+    "ming:battery": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "20043e2e-20fc-4a5c-a777-7a5e61a76360",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 965,
+      "originalSha256": "7b359dacf7edec47f9e6eade426ca57fcfff5b42c439066e33665c2eee3f7edf",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/ming/battery.glb": {
+          "sha256": "dfc47dafa47e478d7c07ba4823a5d843b799ea843679bf30e8434f2189c4f89d",
+          "size": 316604
+        },
+        "ublic/models/buildings/ming/battery_lod1.glb": {
+          "sha256": "3aaac9f4ba14c1a9e7722a125bd31b73f6c6379c54a4b5ba0b283083cf53f67b",
+          "size": 75268
+        }
+      }
+    },
+    "ming:magazine": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "56912cae-b3d8-49b2-9d59-229b741ce9b4",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 905,
+      "originalSha256": "200bc7185f34bdb301671e4dd991a584e57d360e7a01d7fd5094a4c765a9bf06",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/ming/magazine.glb": {
+          "sha256": "23826e351e00626fc6ffa36c03c9a1c00b2d6f7aa6830c7e21c337b5d225d65d",
+          "size": 337532
+        },
+        "ublic/models/buildings/ming/magazine_lod1.glb": {
+          "sha256": "ef0471113e0181438c4cfced652639b8825ad15310169fe7b631f2033c205888",
+          "size": 71836
+        }
+      }
+    },
+    "ming:dock": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "5fb0a15f-d99d-48f2-801c-0b4560d37d88",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 845,
+      "originalSha256": "a9724ea6dbd148358110933b4d9a008e5657a647a43303ce8f652fbcf3e21b7d",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/ming/dock.glb": {
+          "sha256": "754b6f8d28f130c41052ffb91ab28ce9382f008b7cf0ef152ee7cafdd14fca0d",
+          "size": 269512
+        },
+        "ublic/models/buildings/ming/dock_lod1.glb": {
+          "sha256": "7f73fd8f69f9f3a966a1b16991983b53176cdd4dbdbb1027325c923545ce42da",
+          "size": 69064
+        }
+      }
+    },
+    "ming:beacon": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "f56bd415-d6f7-4b77-9e0d-a581a3958d2d",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 785,
+      "originalSha256": "6f6035fcca057956948b920c27a17c23b03508ac5487fd554bb931895cff86e1",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/ming/beacon.glb": {
+          "sha256": "a331903b1b6538f7e58a1a78636258cc7a8fbd2facd6dde7acfce365ce98f224",
+          "size": 366288
+        },
+        "ublic/models/buildings/ming/beacon_lod1.glb": {
+          "sha256": "5a6c04e6012be5edc3c238dd6e6f0edc2dc06d95b2e6e6c74ae0be88ee67defc",
+          "size": 81156
+        }
+      }
+    },
+    "ming:camp": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "105cc3d3-c845-4834-ba8c-3961d6c8f5b0",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "detailed",
+        "geometry_quality": "detailed",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 725,
+      "originalSha256": "9bdca811fc4a44b640554b32d67d66e29a6816c96d846928a44647a4585d80d4",
+      "credits": 60,
+      "runtime": {
+        "ublic/models/buildings/ming/camp.glb": {
+          "sha256": "54f53a910a76a873415aa79a325c087842d7e809a0a42179c54ec0fffaeca6fc",
+          "size": 392856
+        },
+        "ublic/models/buildings/ming/camp_lod1.glb": {
+          "sha256": "55bd16809a67ae23ff979d32333ee4329dcd44b239f55c761b57587c427870ed",
+          "size": 83268
+        }
+      }
+    },
+    "spain:shipyard": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "fb0f20f2-9ca9-4379-acb4-c81eec649e4b",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 665,
+      "originalSha256": "d6d48b9c12fb87aee6cc9c1c45f2fb56f9657b4abdc4d52a6ab54cfcdb775884",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/spain/shipyard.glb": {
+          "sha256": "764eb6f8b0d4959587dededce428f81751f69bda0b4d898bae3fd8d48067f5f3",
+          "size": 204540
+        },
+        "ublic/models/buildings/spain/shipyard_lod1.glb": {
+          "sha256": "c6a1fd7b40ffedb0debb91f2d1faa5dd6547267e53e2f3e83b86056e6b271db5",
+          "size": 69436
+        }
+      }
+    },
+    "spain:battery": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "157ad07a-6354-4186-bbbe-01f70a42e7b1",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 635,
+      "originalSha256": "eca7007c003a182a5040c31e3683eb21e1040a632e8377217a949815a39d0d93",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/spain/battery.glb": {
+          "sha256": "e4dcc70ba5dbdae8f7932797b1d6336af1c49c90f73d5e9467c40f2432c77234",
+          "size": 206608
+        },
+        "ublic/models/buildings/spain/battery_lod1.glb": {
+          "sha256": "d533c7595fb0f28bd6af10794f29b695451eb9fede08e1fdf8ee1a91fd5d1757",
+          "size": 56272
+        }
+      }
+    },
+    "spain:dock": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "6a176afb-d6c9-4a82-9622-67ff2f11b721",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 605,
+      "originalSha256": "543b8640083ddd31079e5d2df44977ce71d92f78870ab820879cd9ac5fc3c25e",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/spain/dock.glb": {
+          "sha256": "ea4f3ef090c7b4bf7962c08bab258e30609928a8dee4af7ca907f8d1bbd8a216",
+          "size": 228020
+        },
+        "ublic/models/buildings/spain/dock_lod1.glb": {
+          "sha256": "3bebe38da957f5effc8f22c40ee8248d6bc8d78b7e2318fc1376b5deb83e1149",
+          "size": 55096
+        }
+      }
+    },
+    "spain:camp": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "45fafcbb-c344-4af3-a3aa-bc8ee64cacdd",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 575,
+      "originalSha256": "11b3b33ab4d400657117030f109125b09b778aae93345353b380aae3abba17bd",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/spain/camp.glb": {
+          "sha256": "88465f03c24d6be013593ee4bde914dd80d973b8365e53c9be3008ed4e3b918e",
+          "size": 257692
+        },
+        "ublic/models/buildings/spain/camp_lod1.glb": {
+          "sha256": "4301b717bd3329b1de416cd0519100871ff767832da3e530acb9cb0b032bf26d",
+          "size": 73104
+        }
+      }
+    },
+    "england:shipyard": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "95184105-9f32-431b-afd7-5b102ce9d9ad",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 545,
+      "originalSha256": "88db024b79c91540274949701fdfaa7ae559853e1d07842f3d4070d049f02e43",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/england/shipyard.glb": {
+          "sha256": "1647f232c84171f0f223fa56386a44abea4a2517a1019cda4b3a832a78eb10e8",
+          "size": 230084
+        },
+        "ublic/models/buildings/england/shipyard_lod1.glb": {
+          "sha256": "d107bdfac3e1e4983a2bc52211349b71fb27f470d9319db4a53a66a2234d8fd2",
+          "size": 71364
+        }
+      }
+    },
+    "england:battery": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "870dec96-55a4-407b-a05f-4918798d4b90",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 515,
+      "originalSha256": "d15686f37538f203bbddb05dabccb3bf859805b482f82b513709c688f7d94da7",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/england/battery.glb": {
+          "sha256": "fc46c1f67ec519617c54d03c0265c399855871d404dbf40509c7bf14059ed5f2",
+          "size": 235276
+        },
+        "ublic/models/buildings/england/battery_lod1.glb": {
+          "sha256": "476ba6bd31833aed156ffd209f00185ef75327fa9afa7e482979dc0a19dbf668",
+          "size": 57660
+        }
+      }
+    },
+    "england:dock": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "7396b638-afea-4eb6-843b-ad08e39a30e3",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 485,
+      "originalSha256": "e15de2ba23766e3901395c26c6a0efc6f4077acce552e6c64c8d48cd8f41384f",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/england/dock.glb": {
+          "sha256": "29ba996ac1fe4c8a5ee31120f35bf0c2e1a7deaa12cd12efa6700ad0a6b10aff",
+          "size": 243332
+        },
+        "ublic/models/buildings/england/dock_lod1.glb": {
+          "sha256": "2fb9833ba24b75bc2a74479535927ebc33bfae39b954bc4e613eec542e111e05",
+          "size": 59996
+        }
+      }
+    },
+    "england:camp": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "b50821be-4b66-4757-ab26-7fe280682a38",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 455,
+      "originalSha256": "7ae163ec77d406aaa150274c91397233c25d1c3ba8be9da40e3a0eff36c38f48",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/england/camp.glb": {
+          "sha256": "2cdb099a57775ffc23dd3c2784d25589c76e36d7556933b1d0402766adf9e243",
+          "size": 245836
+        },
+        "ublic/models/buildings/england/camp_lod1.glb": {
+          "sha256": "703dd66e73a9e7879cb82bf1c6f4024380113829ca8b5d4224ef48fe6a079792",
+          "size": 56236
+        }
+      }
+    },
+    "ottoman:shipyard": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "023e76f3-1b8b-46ff-8a5d-97d420ed2567",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 425,
+      "originalSha256": "e3aeca5826ece805d9424fb031a502acf143993210afeffc926acf7378aca4c3",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/ottoman/shipyard.glb": {
+          "sha256": "50daf3f987b3c0d6c77bf06fb6c82d4fea158957e254c4a4bf9a5a13d30522bb",
+          "size": 235064
+        },
+        "ublic/models/buildings/ottoman/shipyard_lod1.glb": {
+          "sha256": "8f4f1796a94fe2516a2bda83dba3add961583438b91493c781337d50e3b2d92e",
+          "size": 74240
+        }
+      }
+    },
+    "ottoman:battery": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "26424ab2-ae90-4979-90d0-6cd423878d98",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 395,
+      "originalSha256": "a8b89844d6e9d032d36f510f28a4ea33c1e10171b0677017c5625beafca0ce26",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/ottoman/battery.glb": {
+          "sha256": "012051f1cf71db86d4ce29eab484add7d8939ecfddaf9b8436e79946242b12d2",
+          "size": 210604
+        },
+        "ublic/models/buildings/ottoman/battery_lod1.glb": {
+          "sha256": "36fd452c947dae411d27687bdcc843553603dd4f7bfc6f0ac396eb9571806742",
+          "size": 55772
+        }
+      }
+    },
+    "ottoman:dock": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "b58f2760-2f53-46aa-9e35-abb135704a08",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 365,
+      "originalSha256": "4ec8f14173c07b2440f7fa8c36b83100e36681c66df20fb1ead385ed50aff666",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/ottoman/dock.glb": {
+          "sha256": "26e5a47913e4e097fe82cfd310a58a1c84ce96b11391ea223e867384455f5670",
+          "size": 245296
+        },
+        "ublic/models/buildings/ottoman/dock_lod1.glb": {
+          "sha256": "a6a52d4bc93c4c5fe0240046c34a6a5d4589d4ea18d2d245ee2e21292647058c",
+          "size": 72084
+        }
+      }
+    },
+    "ottoman:camp": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "0d25feb9-ef24-4f82-8e38-ecfe7242398a",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 335,
+      "originalSha256": "24b9532d0562ed6482a456326d601ddadcc46b8be54d52c0d77d7d357e953961",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/ottoman/camp.glb": {
+          "sha256": "8e3ced6133cde9eb4c796294da4549f6b0f7fab08198b3005a8e9cd4602518a7",
+          "size": 164784
+        },
+        "ublic/models/buildings/ottoman/camp_lod1.glb": {
+          "sha256": "62942148cc5669f673b9de80cf81b948d09c115b8e18dc3c1fee89b86ce41b53",
+          "size": 34824
+        }
+      }
+    },
+    "venice:shipyard": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "1c5758e5-3bf5-4d7c-931d-1de1b5aa9edc",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 305,
+      "originalSha256": "c77468d808d016a4afcb039174ce5b72f20523f0284cbde7691a29403c3885b3",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/venice/shipyard.glb": {
+          "sha256": "10506cba24b03ca385eb31acb049031c67107ce5a4c83897042d3f4b1399c97e",
+          "size": 271460
+        },
+        "ublic/models/buildings/venice/shipyard_lod1.glb": {
+          "sha256": "361f8c55d9708b1bd7037c7ee09c9ebc7ee7d8334094c7eb9a91615fcb9651bb",
+          "size": 65356
+        }
+      }
+    },
+    "venice:battery": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "1b570ca7-7905-44f5-9162-03edfdff7813",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 275,
+      "originalSha256": "17a788c4b33736e869ca0954d1e33b6ac1e0e7093d9debcd6bcd5f2b44c1cc29",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/venice/battery.glb": {
+          "sha256": "2ee0915f7dac2f3de33cb48eecaff00139ea7aad6bdb36501d331055cc41af7c",
+          "size": 289336
+        },
+        "ublic/models/buildings/venice/battery_lod1.glb": {
+          "sha256": "df5bf57af590f4b93b3c45650a0019a869860ef7f716cfbb643958b9abcdf346",
+          "size": 68592
+        }
+      }
+    },
+    "venice:dock": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "ccdad5df-5675-44ec-8139-f23dd7699e3b",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 245,
+      "originalSha256": "9ab86cf05c44044e24515033ef31af62ae10148ea6dabc95a3625035bf9fd6a5",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/venice/dock.glb": {
+          "sha256": "4b77ddb8ff32e5dde67b5713ba016f6fe01a5f447c8f308ff0980a2656ef6798",
+          "size": 252640
+        },
+        "ublic/models/buildings/venice/dock_lod1.glb": {
+          "sha256": "b6e61641bf4aa460a6a57d834c7a9c4df1d6675fae8ec7c6b0ab94e7e319bfad",
+          "size": 54476
+        }
+      }
+    },
+    "venice:camp": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "4c76b256-d264-4b6e-9270-edf3ca0d7f50",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 215,
+      "originalSha256": "88962e72e03f0cf3fdce9a3155b71106bbb565ed690b06a0145dcefbf7685dbb",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/venice/camp.glb": {
+          "sha256": "25a8db52fb4f35307d422814425b25d42b192db06b9571952bab9c9ca66843e3",
+          "size": 240684
+        },
+        "ublic/models/buildings/venice/camp_lod1.glb": {
+          "sha256": "42da63820f6a416062e128d44e69027dc7e9a2952963d683147dc19ad3ec4b7c",
+          "size": 23012
+        }
+      }
+    },
+    "france:shipyard": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "424853c6-1df9-4dbd-8bca-f1d6760564b5",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 185,
+      "originalSha256": "7acb86408868c4fa14974775647271a23bb1f783e721f6e8e10f73028edf1e93",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/france/shipyard.glb": {
+          "sha256": "646772c6fae6b981c32aa4d595f6455d9e8d7b8e41f62e5f0061827edf6fd6a3",
+          "size": 218812
+        },
+        "ublic/models/buildings/france/shipyard_lod1.glb": {
+          "sha256": "d4e7283a2bd51b31c9f3b67ff97569852b4cf9dd082f697b45c3ccd60bbab35f",
+          "size": 80788
+        }
+      }
+    },
+    "france:battery": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "c4e72d0e-3e7f-40e6-a7f4-6f9c5fb616fb",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 155,
+      "originalSha256": "300620d48be28d6cbab400d5e68edc0711643c3c433362546d6624639551394a",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/france/battery.glb": {
+          "sha256": "5326293a7cff365225d474cdee609d860d31454896b642040c493504368f0631",
+          "size": 202032
+        },
+        "ublic/models/buildings/france/battery_lod1.glb": {
+          "sha256": "9b6e9521126e43dcdcca7f6c589d79d1db76507527d12e5534b507d0827f935f",
+          "size": 53716
+        }
+      }
+    },
+    "france:dock": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "28235658-d97a-4506-a901-ce02014a1ab4",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 125,
+      "originalSha256": "4c679d11a2c6aa01160b378a71ec587f037967f9c06a5d9bb2132a317aa008a3",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/france/dock.glb": {
+          "sha256": "f162c7e54389ed64e6587ab893e416b8a58748cb0e7dbce7ac90d836d015ef0c",
+          "size": 219736
+        },
+        "ublic/models/buildings/france/dock_lod1.glb": {
+          "sha256": "9bb8d1ec6281e62d8c74ae48a785f3514e578f0b8ee6b526c3db143851fa6983",
+          "size": 62824
+        }
+      }
+    },
+    "france:camp": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "90481a26-67d9-49fb-ae6f-1dd0d9aa4e37",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 95,
+      "originalSha256": "c6d71ab72e085c2b5748fbdf5d1661752e82b59f69b2f328e8b91dd53d949995",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/france/camp.glb": {
+          "sha256": "4b5cfd4b1a8d6bfef07636f2a5baf01c454452644d24b9f57732850e600c806a",
+          "size": 222928
+        },
+        "ublic/models/buildings/france/camp_lod1.glb": {
+          "sha256": "58e33a3578f70297b5805aa3d896a879189ca949cdecea81c1a1faf626e254d8",
+          "size": 53476
+        }
+      }
+    },
+    "spain:magazine": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "c5e757e3-e195-4d2f-96f0-15bcd0cd2267",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 65,
+      "originalSha256": "c8bb12b52a6e52aa71905cd8a157afac00196ec25dd7fe8f30467dcda5cc7bb8",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/spain/magazine.glb": {
+          "sha256": "72cb0ef3e971beb45e366496c25d37484bc4ebd8d8d9119476e30b3c51d05f8c",
+          "size": 220012
+        },
+        "ublic/models/buildings/spain/magazine_lod1.glb": {
+          "sha256": "9363d6aea7ec6c0f03bb40e130fec9b07613f6c448493610b8ffca853e78c6e3",
+          "size": 46232
+        }
+      }
+    },
+    "england:magazine": {
+      "provider": "tripo",
+      "model": "v3.1-20260211",
+      "id": "fb9c4528-1ff1-40ed-a5af-e932b0819f7e",
+      "request": {
+        "type": "image_to_model",
+        "file": {
+          "type": "png"
+        },
+        "texture": true,
+        "pbr": true,
+        "texture_quality": "standard",
+        "geometry_quality": "standard",
+        "face_limit": 4000,
+        "model_version": "v3.1-20260211"
+      },
+      "status": "downloaded",
+      "balanceBefore": 35,
+      "originalSha256": "d11102d7de52fbe18834b0c2336c89c5b84ad1604409cc9643066a874890f5aa",
+      "credits": 30,
+      "runtime": {
+        "ublic/models/buildings/england/magazine.glb": {
+          "sha256": "5d11f161b27ceec9ed5279e0337e28d6269ace44eaff8c298b18009c5470e109",
+          "size": 242944
+        },
+        "ublic/models/buildings/england/magazine_lod1.glb": {
+          "sha256": "f50898cc4facac205bcc1070fc82b27b5c8a8a61c793db6f580f56e78ee7bd8b",
+          "size": 47152
+        }
+      }
+    }
+  }
+}

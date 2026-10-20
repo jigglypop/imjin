@@ -47,7 +47,7 @@ macOS는 Chrome + Metal, Windows는 Edge + D3D11. GPU는 같이 돌아가는 다
 - `npm run assets -- push [paths] [--dry-run]` 버킷에 없는 새 파일·바뀐 파일을 올리고 기록함; 변경과 함께 `assets.json`을 커밋. 없어진 파일은 이름을 지정했을 때만(`push public/ui/x.webp`) `assets.json`에서 빠지고 블롭은 남음.
 - `status [--remote]` `assets.json`과 다른 것(과 버킷이 다 갖고 있는지); `verify` history를 포함한 모든 버전이 버킷에 제 크기로 있는지; `restore <path> [--previous | --sha=<prefix>]` 이전 버전을 되살리고 그 교체를 기록함.
 - `models [--json]` 모델 보관소: 모든 .glb의 크기, 삼각형 수, 버전, 그리고 파일명이나 해시로 그것을 가리키는 기록(`assets-src/*/provenance.json`, `runtime-assets.json`, `README.md`)의 도구·모델·크레딧.
-- 캐시는 모든 worktree가 공유함: `IMJIN_ASSET_CACHE`, 없으면 `%LOCALAPPDATA%imjin-assets` 또는 `~/.cache/imjin-assets`. 언제 지워도 됨.
+- 캐시는 체크아웃 밖에 있음: `IMJIN_ASSET_CACHE`, 없으면 `%LOCALAPPDATA%imjin-assets` 또는 `~/.cache/imjin-assets`. 언제 지워도 됨.
 - 자격 증명: `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN`(CI의 배포 역할은 읽기 가능), 없으면 aws CLI(`aws login`); push는 본인 자격 증명으로. `setup [--apply]`은 버킷과 역할의 읽기 정책을 만들고, `untrack [--apply]`은 바이너리를 git에서 빼고 그 패턴을 `.gitignore` 맨 앞에 넣는 한 번뿐인 전환.
 - 병합 뒤 `assets.json`이 충돌하면 양쪽 줄을 다 남기고, 양쪽이 같은 파일을 바꿨으면 원하는 버전을 남김(다른 블롭도 저장소에 남아 있음).
 - 콜드 아카이브(생성 원본: 컨셉 PNG, raw/rig/anim GLB, 후보, .blend): `npm run assets -- archive <paths> [--from=<목록>] [--dry-run]`이 같은 버킷의 `archive/sha256/`에 올리고 커밋하는 `assets-archive.json`(경로 → sha256, 크기, uploadedAt)에 적은 뒤, HEAD로 크기를 확인하고 로컬 파일을 지움. `assets.json`이 관리하는 파일은 건드리지 않음. `archive-pull "<경로|glob>" [--dry-run] [--force]`로 필요할 때만 되살리고, `archive-status [--remote]`로 폴더별 현황 확인. CI와 `pull`은 아카이브를 받지 않음 — 생성 원본은 `push` 말고 여기로.

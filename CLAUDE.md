@@ -23,9 +23,9 @@ three.js r186 `three/webgpu` + TSL, @react-three/fiber, React 19, zustand, Vite,
 
 ## 하네스 (작업 전에 해당 스킬을 먼저 읽을 것. 확정된 규칙·거절된 방식은 여기에 바로 추가)
 - `.claude/skills/generals-cast` 장수 3D·무기 / `chapters` 아르마다·레판토·트라팔가르 장 / `cinematics` 전투 시네마틱·대사·고증 / `typography` 폰트(전부 Pretendard) / `ui-design` 글래스 UI·간격·라벨 디자인 시스템 / `ship` 운영 배포
-- 생성 원본은 로컬에 쌓지 않음: `npm run assets -- archive`로 S3 콜드 보관(CI는 받지 않음). worktree를 여러 개 만들어 에셋을 복사하지 않음. C: 여유 3 GB 이상 유지.
+- 생성 원본은 로컬에 쌓지 않음: `npm run assets -- archive`로 S3 콜드 보관(CI는 받지 않음). C: 여유 3 GB 이상 유지.
 
-- **worktree·브랜치는 되도록 만들지 말 것.** 작업은 통합 브랜치(chapters) 하나에서. 부득이하게 만들면(배포용 임시 등) 작업이 끝나는 즉시 junction 해제 → worktree 제거 → 브랜치 삭제까지 반드시 지울 것. 에이전트 isolation:worktree 사용 금지.
+- **worktree·브랜치 금지.** 모든 작업은 `C:\dev\imjin`의 `main` 하나에서 하고 `main`에 바로 커밋·푸시. 에이전트 isolation:worktree 사용 금지.
 
 ## 에셋
 - `public/`·`assets-src/`의 런타임 바이너리(모델, 텍스처, 오디오, 폰트, 지형)는 내용 해시로 S3에 있고 목록은 커밋된 `assets.json`: 체크아웃 뒤 `npm run assets -- pull`, 바이너리를 추가·변경하면 `npm run assets -- push` 후 `assets.json` 커밋. 생성 원본은 `assets-archive.json`(콜드 보관).
@@ -33,5 +33,5 @@ three.js r186 `three/webgpu` + TSL, @react-three/fiber, React 19, zustand, Vite,
 - `npm run assets -- models`가 모델 보관소: 모든 .glb의 삼각형 수, 버전, 출처 기록. 자세한 것은 [docs/dev.md](docs/dev.md#에셋).
 
 ## 배포
-- 배포는 `ship` 스킬 절차대로(origin/main 기준 임시 worktree, 해당 파일만). `main`에 푸시하면 타입체크·테스트·빌드 뒤 사이트(S3 + CloudFront)와 멀티플레이 서버(EC2, SSM 경유)가 함께 배포됨. 요청 없이 푸시하지 말 것.
+- 배포는 `ship` 스킬 절차대로: `main`에서 커밋하고 `origin/main`으로 푸시. 푸시하면 타입체크·테스트·빌드 뒤 사이트(S3 + CloudFront)와 멀티플레이 서버(EC2, SSM 경유)가 함께 배포됨. 요청 없이 푸시하지 말 것.
 - 서버 수동 배포: `scripts/deploy-mp.sh deploy|status`. 서버 데이터는 호스트의 `/opt/imjin/data`에 있고 배포가 덮어쓰지 않음.

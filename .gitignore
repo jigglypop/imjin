@@ -1,3 +1,45 @@
+# Binary assets live in S3 by content hash (assets.json, scripts/assets.mjs): npm run assets -- pull after a checkout.
+# Keep this block first: git lets the last matching rule decide, so the rules below that keep local scratch out of
+# git keep it out of the store as well.
+/public/**/*.avif
+/public/**/*.bin
+/public/**/*.dem
+/public/**/*.exr
+/public/**/*.glb
+/public/**/*.hdr
+/public/**/*.jpeg
+/public/**/*.jpg
+/public/**/*.ktx2
+/public/**/*.mp3
+/public/**/*.mp4
+/public/**/*.ogg
+/public/**/*.png
+/public/**/*.wav
+/public/**/*.webm
+/public/**/*.webp
+/public/**/*.woff
+/public/**/*.woff2
+/public/**/*.zip
+/assets-src/**/*.avif
+/assets-src/**/*.bin
+/assets-src/**/*.dem
+/assets-src/**/*.exr
+/assets-src/**/*.glb
+/assets-src/**/*.hdr
+/assets-src/**/*.jpeg
+/assets-src/**/*.jpg
+/assets-src/**/*.ktx2
+/assets-src/**/*.mp3
+/assets-src/**/*.mp4
+/assets-src/**/*.ogg
+/assets-src/**/*.png
+/assets-src/**/*.wav
+/assets-src/**/*.webm
+/assets-src/**/*.webp
+/assets-src/**/*.woff
+/assets-src/**/*.woff2
+/assets-src/**/*.zip
+
 node_modules
 dist
 .env

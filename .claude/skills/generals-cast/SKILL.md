@@ -75,5 +75,5 @@ Script: `scripts/generals-cast.mjs` (steps concept | model | rig | motion | pack
 - Zero tolerance: any flaw means redo that step before going live. Live means `index.json` only after approval.
 - Never double-submit a provider task: poll the job files first. Keep the ledger up to date.
 - Check API balances. Meshy rigs need Meshy credits, so finish concept and Tripo work while waiting.
-- No commit or push from generation work. Deploys go through a clean worktree on origin/main containing only these files.
+- No commit or push from generation work. Deploys follow the `ship` skill: commit from main, no worktrees.
 - After a general goes live (and for rejected candidates immediately), archive its sources with `npm run assets -- archive <folder>` (concepts, raw/rig/anim GLBs, candidates; .json/.md stay local) — never keep generation binaries on the local disk. Bring one back with `npm run assets -- archive-pull "<glob>"`. Never put generation sources in assets.json (`push`): CI pulls all of it on every deploy.
