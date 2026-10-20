@@ -3,6 +3,7 @@ import { useAccount } from '../../account/store';
 import { useT } from '../../i18n';
 import { ScreenFrame } from '../Screens';
 import { AuthModal } from './AuthModal';
+import '../account.css';
 
 /**
  * The account's own navy (제독, 본진) is kept on the server with its coins and rewards: those screens open only for a
@@ -20,7 +21,7 @@ export function LoginGate({ title, children }: { title: string; children: ReactN
         <p style={{ fontSize: 14, opacity: 0.75, margin: '0 0 20px', lineHeight: 1.55 }}>
           {t('제독, 진영, 본진과 전투 보상은 계정에 저장됩니다. 로그인하면 역사 전투와 캠페인 보상이 쌓입니다.')}
         </p>
-        <button type="button" className="g-btn g-btn--primary g-btn--lg" onClick={() => setOpen(true)}>
+        <button type="button" className="acc-submit" style={{ minWidth: 160 }} onClick={() => setOpen(true)}>
           {t('로그인')}
         </button>
       </div>

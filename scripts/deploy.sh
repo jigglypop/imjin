@@ -20,7 +20,7 @@ EXCLUDES=()
 while read -r file key; do EXCLUDES+=(--exclude "$key"); done <<< "$PAGES"
 
 aws s3 sync dist "s3://$BUCKET" --delete \
-  --exclude "assets/*" --exclude "*.glb" --exclude "textures/*/diff*.jpg" "${EXCLUDES[@]}" \
+  --exclude "assets/*" --exclude "*.glb" --exclude "*/_stage/*" --exclude "textures/*/diff*.jpg" "${EXCLUDES[@]}" \
   --cache-control "public,max-age=86400"
 
 # The ground textures are fetched by content-versioned URLs (src/render/assetUrl.ts): cached for good.
