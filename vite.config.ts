@@ -51,6 +51,10 @@ const DESCRIPTIONS: Record<Exclude<RouteScreen, 'menu'>, Record<Edition, string>
     ko: '표시 언어, 소리, 기기 등급, 카메라 흔들림 설정과 조작 안내입니다.',
     en: 'Language, sound, device tier and camera shake settings, and the controls.',
   },
+  port: {
+    ko: '내 나라의 본진 항구입니다. 병기창, 조선소, 요새를 올리고 역사 전투와 캠페인에서 번 엽전으로 함선을 사서 정박시킵니다.',
+    en: "Your navy's home port: raise its arsenal, shipyard and fortress, and spend the coins won in historical battles and campaigns on ships that moor at its quay.",
+  },
   generals: {
     ko: '이순신, 와키자카, 진린 등 해전의 장수를 키우고 갑옷을 사서 입힙니다. 갑옷과 재능은 장수가 이끄는 함대를 강하게 합니다.',
     en: 'Raise the admirals of the war, from Yi Sun-sin and Wakisaka to Chen Lin, and buy them armor; their armor and skills strengthen the squadrons they lead.',

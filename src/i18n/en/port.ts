@@ -4,7 +4,6 @@ for (const [ko, en] of [['조선소', 'Shipyard'], ['병기창', 'Arsenal']] as 
 
 export const EN_PORT: Record<string, string> = {
   ...needs,
-  '본진': 'Home Port',
   '본진 준비 중': 'Preparing the home port',
   '조선소': 'Shipyard',
   '병기창': 'Arsenal',
